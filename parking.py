@@ -1,18 +1,29 @@
 from random import choice
 from random import randint
 import json
+import boto3
+import os
+import pathlib
 
 class ParkingLot:
     def __init__(self,size=2000,w=8,l=12):
         self.capacity = size//(w*l)
         self.arr = [0]*self.capacity
     
-    def get_json(self):
+    def get_json(self,bucket_name):
         d = {}
         for i,car in enumerate(self.arr):
             d[car] = i
         with open('parking.json','w') as outfile:
-            json.dump(d,outfile)  
+            json.dump(d,outfile)
+        try:
+            file_name=os.path.join(pathlib.Path('parking.json').parent.resolve(),'parking.json')
+            s3=boto3.client('s3')
+            response = s3.upload_file(file_name,bucket_name,'parking.json')
+            print('successfully uploaded to s3')
+        except Exception as e:
+            print('Unable to upload due to error : %s'%e)
+
 
 class Car:
     def __init__(self,license):
@@ -51,9 +62,12 @@ def main(capacity = 25,w=8,l=12,**kwargs):
     if kwargs.get('size',None):
         size = kwargs.get('size')
     else: size = 2000
+    if kwargs.get('bucket_name',None):
+        bucket_name=kwargs.get('bucket_name')
+    else: bucket_name ='shashank1992sample'
     parking_lot = ParkingLot(size,w,l)
     fill(cars,parking_lot,w,l)
-    parking_lot.get_json()
+    parking_lot.get_json(bucket_name)
 
 if __name__=='__main__':
     main()
